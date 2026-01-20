@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>火星著陸模擬器：工程師挑戰</title>
+    <style>
+        body { margin: 0; background: #050505; overflow: hidden; font-family: "Microsoft JhengHei", "Heiti TC", sans-serif; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; }
+        #gameContainer { position: relative; box-shadow: 0 0 50px rgba(0, 150, 255, 0.2); border: 2px solid #333; }
+        canvas { display: block; background: linear-gradient(to bottom, #000000, #1a0505); }
+        
+        /* UI 樣式 */
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 10, 15, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; display: none; z-index: 10; }
+        
+        h1 { margin: 0; color: #ff4500; font-size: 32px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255, 69, 0, 0.5); }
+        h2 { color: #4caf50; margin: 5px 0 15px 0; font-size: 24px; }
+        
+        /* 知識卡片樣式 - 核心修改 */
+        .knowledge-box {
+            background: #151d26;
+            border-left: 5px solid #e74c3c; /* 預設紅色，成功會變綠 */
+            padding: 20px;
+            margin: 15px 30px 25px 30px;
+            max-width: 400px;
+            text-align: left;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.6);
+            border-radius: 0 8px 8px 0;
+        }
+        .knowledge-title { color: #aaa; font-weight: bold; font-size: 14px; margin-bottom: 8px; letter-spacing: 1px;}
+        .knowledge-text { color: #fff; font-size: 15px; line-height: 1.6; }
+        .highlight-fail { color: #e74c3c; font-weight: bold; }
+        .highlight-success { color: #2ecc71; font-weight: bold; }
+
+        .stat-box { background: #222; padding: 8px 20px; border-radius: 4px; border: 1px solid #444; margin-bottom: 15px; }
+        .money { color: #f1c40f; font-weight: bold; font-size: 20px; }
+
+        /* 商店網格 */
+        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .shop-item { background: #1a1a1a; padding: 10px; border: 1px solid #444; border-radius: 6px; cursor: pointer; transition: 0.2s; width: 180px; text-align: left; position: relative; }
+        .shop-item:hover { background: #252525; border-color: #3498db; transform: translateY(-2px); }
+        
+        .item-name { font-weight: bold; color: #fff; font-size: 15px; }
+        .item-price { position: absolute; top: 10px; right: 10px; color: #f1c40f; font-size: 14px; font-weight: bold;}
+        .item-physics { color: #aaa; font-size: 11px; margin-top: 5px; font-style: normal; line-height: 1.3; } 
+        .item-level { color: #4caf50; font-size: 11px; margin-top: 4px; font-weight: bold;}
+
+        button { background: #2980b9; color: white; border: none; padding: 12px 50px; font-size: 18px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 5px; transition: 0.2s; letter-spacing: 1px;}
+        button:hover { background: #3498db; transform: scale(1.05); box-shadow: 0 0 15px rgba(52, 152, 219, 0.4); }
+        
+        #hud { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; pointer-events: none; }
+        .hud-left, .hud-right { font-family: 'Courier New', monospace; font-size: 15px; text-shadow: 1px 1px 2px black; font-weight: bold; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="480" height="640"></canvas>
+        
+        <div id="hud">
+            <div class="hud-left">
+                垂直速度: <span id="speedDisplay">0.0</span> m/s<br>
+                受力狀態: <span id="forceDisplay">重力牽引</span>
+            </div>
+            <div class="hud-right" style="text-align: right;">
+                燃料: <span id="fuelDisplay">100</span>%<br>
+                預算: $<span id="moneyDisplay">0</span><br>
+                降落傘: <span id="chuteDisplay">0</span> (按 'P')
+            </div>
+        </div>
+
+        <div id="shopOverlay" class="overlay">
+            <h1 id="missionTitle">任務完成</h1>
+            <h2 id="missionEarnings">+$120</h2>
+            
+            <div class="knowledge-box" id="kBox">
+                <div class="knowledge-title" id="kTitle">🚀 航天史實資料庫</div>
+                <div id="knowledgeText" class="knowledge-text">
+                    歡迎來到火星。這裡的重力只有地球的 38%。你必須控制噴射引擎產生「推力」來對抗重力，否則就會像石頭一樣掉下去。
+                </div>
+            </div>
+
+            <div class="stat-box">
+                現有研發資金: <span class="money">$<span id="shopMoney">0</span></span>
+            </div>
+            
+            <div class="shop-grid">
+                <div class="shop-item" onclick="buyUpgrade('tank')">
+                    <div class="item-name">⛽ 擴容燃料艙</div>
+                    <div class="item-price">$<span id="price-tank">50</span></div>
+                    <div class="item-physics">增加質量與燃料攜帶量 (Δt 增加)。防止因燃料耗盡導致的自由落體。</div>
+                    <div id="lvl-tank" class="item-level">Lv.1</div>
+                </div>
+                
+                <div class="shop-item" onclick="buyUpgrade('engine')">
+                    <div class="item-name">🔥 高效能噴嘴</div>
+                    <div class="item-price">$<span id="price-engine">80</span></div>
+                    <div class="item-physics">優化比衝 (Specific Impulse)。提升燃燒效率，用更少的油產生同樣的力。</div>
+                    <div id="lvl-engine" class="item-level">Lv.1</div>
+                </div>
+                
+                <div class="shop-item" onclick="buyUpgrade('gear')">
+                    <div class="item-name">⚙️ 液壓緩衝腿</div>
+                    <div class="item-price">$<span id="price-gear">100</span></div>
+                    <div class="item-physics">強化結構以吸收撞擊時的動能 (KE)。提高安全著陸的速度上限。</div>
+                    <div id="lvl-gear" class="item-level">Lv.1</div>
+                </div>
+                
+                <div class="shop-item" onclick="buyItem('parachute')">
+                    <div class="item-name">☂️ 應急降落傘</div>
+                    <div class="item-price">$<span id="price-parachute">30</span></div>
+                    <div class="item-physics">利用空氣阻力 (Drag) 減速。火星大氣稀薄，需要巨大的傘面。</div>
+                    <div id="qty-parachute" class="item-level">庫存: 0</div>
+                </div>
+            </div>
+
+            <button onclick="startGame()">發射下一枚探測器</button>
+        </div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let cash = 50; 
+    let gameActive = false;
+    let lander = {};
+    let stars = [];
+
+    // 升級數據
+    let upgrades = {
+        tank: { level: 1, cost: 50, max: 5 },
+        engine: { level: 1, cost: 80, max: 5 },
+        gear: { level: 1, cost: 100, max: 5 }
+    };
+    let inventory = { parachute: 0 };
+    
+    // 物理常數
+    const BASE_GRAVITY = 0.035;
+    const BASE_THRUST = 0.1;
+    let currentMaxFuel, currentThrustCost, currentSafeSpeed;
+    
+    let parachuteActive = false;
+    let parachuteTimer = 0;
+
+    // --- 史實資料庫 (Historical & Physics Knowledge Base) ---
+    const FACTS = {
+        // 墜毀：速度過快
+        crash_speed: [
+            "【歷史教訓】1999年，<span class='highlight-fail'>火星極地著陸者號 (Mars Polar Lander)</span> 在下降時墜毀。原因可能是感應器誤判高度，導致引擎過早關閉。",
+            "【歷史教訓】2016年，歐空局的 <span class='highlight-fail'>斯基亞帕雷利號 (Schiaparelli)</span> 以 540 km/h 的速度撞擊火星。原因是電腦數據溢出，誤以為已經著陸而切斷了降落傘。",
+            "【物理分析】你的著陸速度太快了！動能 (KE = ½mv²) 超出了起落架的承受極限，導致結構解體。",
+            "【失敗分析】如果你不及時減速，重力加速度 (g) 會讓你每秒都變得更快。請更早啟動引擎。"
+        ],
+        // 墜毀：燃料耗盡
+        crash_fuel: [
+            "【歷史教訓】2019年，以色列的 <span class='highlight-fail'>Beresheet (創世紀號)</span> 在月球表面墜毀。主引擎在最後時刻發生故障，導致無法減速。",
+            "【物理分析】燃料耗盡意味著失去了「反作用力」。你無法抵抗重力，最後只能變成自由落體運動。",
+            "【工程建議】這次墜毀是因為燃料預算不足。請嘗試在商店升級「擴容燃料艙」，或學習更省油的操作技巧。"
+        ],
+        // 成功：驚險 (油少或速度快)
+        success_hard: [
+            "【歷史重現】<span class='highlight-success'>阿波羅11號</span> 著陸時也驚險萬分！阿姆斯壯切換到手動控制避開亂石，引擎熄火時燃料僅剩不到 20 秒！",
+            "【數據分析】這是一次硬著陸！雖然沒有墜毀，但衝擊力差點震壞儀器。建議升級起落架以備不時之需。"
+        ],
+        // 成功：完美
+        success_perfect: [
+            "【完美操作】就像 <span class='highlight-success'>好奇號 (Curiosity)</span> 一樣！你完美控制了速度矢量，實現了教科書級別的軟著陸。",
+            "【歷史重現】2021年，<span class='highlight-success'>毅力號 (Perseverance)</span> 成功降落耶澤羅撞擊坑。你的操作和它的自動導航系統一樣精準！"
+        ],
+        // 降落傘提示
+        parachute_tip: [
+            "【技術知識】火星大氣密度只有地球的 1%。因此火星降落傘必須在超音速下打開，並承受數萬牛頓的拉力。",
+            "【技術知識】降落傘是利用流體力學中的「阻力」來對抗重力，這是一種不消耗燃料的高效減速方式。"
+        ]
+    };
+
+    // 初始化背景星空
+    for(let i=0; i<100; i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, size: Math.random()*1.5});
+
+    function initLander() {
+        currentMaxFuel = 100 + (upgrades.tank.level - 1) * 30;
+        currentThrustCost = 0.5 - (upgrades.engine.level - 1) * 0.08;
+        currentSafeSpeed = 1.2 + (upgrades.gear.level - 1) * 0.4;
+        
+        lander = {
+            x: canvas.width / 2 - 15,
+            y: 50,
+            width: 30,
+            height: 30,
+            dy: 0,
+            dx: (Math.random() - 0.5) * 1.5,
+            fuel: currentMaxFuel,
+            thrusting: false
+        };
+        parachuteActive = false;
+        parachuteTimer = 0;
+    }
+
+    function startGame() {
+        document.getElementById('shopOverlay').style.display = 'none';
+        initLander();
+        gameActive = true;
+        gameLoop();
+    }
+
+    // 隨機獲取一條知識
+    function getRandomFact(category) {
+        const list = FACTS[category];
+        return list[Math.floor(Math.random() * list.length)];
+    }
+
+    // 顯示結算與知識
+    function showShop(status, earnedMoney, reasonCode) {
+        gameActive = false;
+        cash += earnedMoney;
+        
+        const title = document.getElementById('missionTitle');
+        const earnings = document.getElementById('missionEarnings');
+        const kText = document.getElementById('knowledgeText');
+        const kBox = document.getElementById('kBox');
+        const kTitle = document.getElementById('kTitle');
+        
+        // 樣式重置
+        kBox.style.borderLeftColor = status === "SUCCESS" ? "#2ecc71" : "#e74c3c";
+        
+        if (status === "SUCCESS") {
+            title.innerText = "任務圓滿成功";
+            title.style.color = "#4caf50";
+            earnings.innerText = "獲得撥款: + $" + earnedMoney;
+            
+            // 判斷是完美還是驚險
+            if (reasonCode === "perfect") {
+                kTitle.innerText = "🏆 總工程師日誌：完美";
+                kText.innerHTML = getRandomFact('success_perfect');
+            } else {
+                kTitle.innerText = "⚠️ 總工程師日誌：驚險";
+                kText.innerHTML = getRandomFact('success_hard');
+            }
+        } else {
+            title.innerText = "探測器墜毀";
+            title.style.color = "#e74c3c";
+            earnings.innerText = "保險理賠: + $" + earnedMoney;
+            
+            kTitle.innerText = "💥 事故調查報告";
+            if (reasonCode === "fuel") kText.innerHTML = getRandomFact('crash_fuel');
+            else kText.innerHTML = getRandomFact('crash_speed');
+        }
+
+        // 如果這局用了降落傘，有 40% 概率強制覆蓋為降落傘知識 (強化記憶)
+        if (parachuteActive && Math.random() < 0.4) {
+             kTitle.innerText = "☂️ 技術小百科";
+             kText.innerHTML = getRandomFact('parachute_tip');
+        }
+        
+        updateShopUI();
+        document.getElementById('shopOverlay').style.display = 'flex';
+    }
+
+    function updateShopUI() {
+        document.getElementById('shopMoney').innerText = cash;
+        document.getElementById('moneyDisplay').innerText = cash;
+        updateItemUI('tank', upgrades.tank);
+        updateItemUI('engine', upgrades.engine);
+        updateItemUI('gear', upgrades.gear);
+        document.getElementById('qty-parachute').innerText = "庫存: " + inventory.parachute;
+    }
+
+    function updateItemUI(id, item) {
+        const elPrice = document.getElementById('price-' + id);
+        const elLvl = document.getElementById('lvl-' + id);
+        if (item.level >= item.max) { elPrice.innerText = "-"; elLvl.innerText = "MAX"; }
+        else { elPrice.innerText = item.cost; elLvl.innerText = "Lv." + item.level; }
+    }
+
+    window.buyUpgrade = function(type) {
+        let item = upgrades[type];
+        if (item.level < item.max && cash >= item.cost) {
+            cash -= item.cost;
+            item.level++;
+            item.cost = Math.floor(item.cost * 1.5);
+            updateShopUI();
+        }
+    };
+
+    window.buyItem = function(type) {
+        if (type === 'parachute' && cash >= 30) {
+            cash -= 30;
+            inventory.parachute++;
+            updateShopUI();
+        }
+    };
+
+    // --- 遊戲循環 ---
+    document.addEventListener('keydown', (e) => {
+        if (!gameActive) return;
+        if (e.code === 'Space' && lander.fuel > 0) lander.thrusting = true;
+        if (e.code === 'KeyP' && inventory.parachute > 0 && !parachuteActive) {
+            inventory.parachute--;
+            parachuteActive = true;
+            parachuteTimer = 150;
+        }
+    });
+
+    document.addEventListener('keyup', (e) => { if (e.code === 'Space') lander.thrusting = false; });
+
+    function update() {
+        let gravity = BASE_GRAVITY;
+        let forceStatus = "重力牽引 (Gravity)"; 
+
+        if (parachuteActive) {
+            parachuteTimer--;
+            if (parachuteTimer <= 0) parachuteActive = false;
+            lander.dy *= 0.9; 
+            if (lander.dy > 0.8) lander.dy = 0.8; 
+            lander.thrusting = false;
+            forceStatus = "空氣阻力 (Drag)";
+        } else {
+            if (lander.thrusting && lander.fuel > 0) {
+                lander.dy -= BASE_THRUST;
+                lander.fuel -= currentThrustCost;
+                forceStatus = "引擎推力 (Thrust)";
+            }
+            lander.dy += gravity;
+        }
+        
+        // 更新 HUD 顏色
+        const elForce = document.getElementById('forceDisplay');
+        elForce.innerText = forceStatus;
+        if (forceStatus.includes("推力")) elForce.style.color = "#f1c40f";
+        else if (forceStatus.includes("阻力")) elForce.style.color = "#2ecc71";
+        else elForce.style.color = "#e74c3c";
+
+        lander.y += lander.dy;
+        lander.x += lander.dx;
+        
+        if (lander.x < 0) lander.x = 0;
+        if (lander.x > canvas.width - 30) lander.x = canvas.width - 30;
+
+        if (lander.y + lander.height >= canvas.height - 20) {
+            lander.y = canvas.height - 20 - lander.height;
+            
+            let earned = 0;
+            if (lander.dy < currentSafeSpeed) {
+                // 成功
+                let landingBonus = Math.floor((currentSafeSpeed - lander.dy) * 50);
+                let fuelBonus = Math.floor(lander.fuel);
+                earned = 100 + fuelBonus + landingBonus;
+                
+                // 判斷是否為完美著陸 (油剩很多且很溫柔)
+                let type = (lander.dy < currentSafeSpeed * 0.5) ? "perfect" : "hard";
+                showShop("SUCCESS", earned, type);
+            } else {
+                // 失敗
+                earned = 30; // 稍微提高一點低保
+                let reason = lander.fuel <= 0 ? "fuel" : "speed";
+                showShop("CRASH", earned, reason);
+            }
+        }
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 星星 & 地面
+        ctx.fillStyle = "white"; stars.forEach(s => ctx.fillRect(s.x, s.y, s.size, s.size));
+        ctx.fillStyle = "#d35400"; ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+
+        // 飛船
+        ctx.save();
+        ctx.translate(lander.x, lander.y);
+
+        if (parachuteActive) {
+            // 畫傘
+            ctx.beginPath(); ctx.arc(15, -25, 30, Math.PI, 0);
+            ctx.fillStyle = "#2ecc71"; ctx.fill();
+            ctx.strokeStyle = "#fff"; ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-15, -25); ctx.lineTo(0, 0); ctx.moveTo(45, -25); ctx.lineTo(30, 0); ctx.stroke();
+        }
+
+        // 機身
+        ctx.fillStyle = "#bdc3c7";
+        ctx.beginPath(); ctx.moveTo(15, -10); ctx.lineTo(30, 20); ctx.lineTo(0, 20); ctx.fill();
+        
+        // 畫避震腿
+        ctx.strokeStyle = upgrades.gear.level > 1 ? "#f1c40f" : "#7f8c8d";
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(-5, 30); ctx.moveTo(30, 20); ctx.lineTo(35, 30); ctx.stroke();
+
+        // 噴火
+        if (lander.thrusting && !parachuteActive) {
+            ctx.fillStyle = upgrades.engine.level > 2 ? "#3498db" : "orange";
+            ctx.beginPath(); ctx.moveTo(10, 20); ctx.lineTo(15, 35 + Math.random()*15); ctx.lineTo(20, 20); ctx.fill();
+        }
+        ctx.restore();
+
+        // 實時數據更新
+        document.getElementById('speedDisplay').innerText = (lander.dy * 10).toFixed(1);
+        document.getElementById('speedDisplay').style.color = lander.dy > currentSafeSpeed ? '#e74c3c' : '#2ecc71';
+        document.getElementById('fuelDisplay').innerText = lander.fuel.toFixed(0);
+        document.getElementById('chuteDisplay').innerText = inventory.parachute;
+    }
+
+    function gameLoop() {
+        if (gameActive) { update(); draw(); requestAnimationFrame(gameLoop); }
+    }
+
+    updateShopUI();
+    document.getElementById('shopOverlay').style.display = 'flex';
+
+</script>
+</body>
+</html>
