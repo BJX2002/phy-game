@@ -5,49 +5,58 @@
     <title>火星著陸模擬器：工程師挑戰</title>
     <style>
         body { margin: 0; background: #050505; overflow: hidden; font-family: "Microsoft JhengHei", "Heiti TC", sans-serif; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; }
-        #gameContainer { position: relative; box-shadow: 0 0 50px rgba(0, 150, 255, 0.2); border: 2px solid #333; }
+        #gameContainer { position: relative; box-shadow: 0 0 60px rgba(0, 150, 255, 0.2); border: 2px solid #333; }
         canvas { display: block; background: linear-gradient(to bottom, #000000, #1a0505); }
         
-        /* UI 樣式 */
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 10, 15, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; display: none; z-index: 10; }
+        /* UI 樣式 (加入滾動條以適應新內容) */
+        .overlay { position: absolute; top: 0; left: 0; width: 120%; height: 110%; background: rgba(10, 10, 15, 0.95); display: flex; flex-direction: column; justify-content: flex-start; align-items: center; text-align: center; display: none; z-index: 10; overflow-y: auto; padding-top: 20px; box-sizing: border-box; }
         
-        h1 { margin: 0; color: #ff4500; font-size: 32px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255, 69, 0, 0.5); }
-        h2 { color: #4caf50; margin: 5px 0 15px 0; font-size: 24px; }
+        h1 { margin: 0; color: #ff4500; font-size: 28px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255, 69, 0, 0.5); }
+        h2 { color: #4caf50; margin: 5px 0 10px 0; font-size: 20px; }
         
-        /* 知識卡片樣式 - 核心修改 */
+        /* 知識卡片樣式 */
         .knowledge-box {
             background: #151d26;
-            border-left: 5px solid #e74c3c; /* 預設紅色，成功會變綠 */
-            padding: 20px;
-            margin: 15px 30px 25px 30px;
+            border-left: 5px solid #e74c3c;
+            padding: 15px;
+            margin: 10px 20px;
             max-width: 400px;
             text-align: left;
             box-shadow: 0 5px 15px rgba(0,0,0,0.6);
             border-radius: 0 8px 8px 0;
         }
-        .knowledge-title { color: #aaa; font-weight: bold; font-size: 14px; margin-bottom: 8px; letter-spacing: 1px;}
-        .knowledge-text { color: #fff; font-size: 15px; line-height: 1.6; }
+        .knowledge-title { color: #aaa; font-weight: bold; font-size: 13px; margin-bottom: 5px; letter-spacing: 1px;}
+        .knowledge-text { color: #fff; font-size: 13px; line-height: 1.5; }
         .highlight-fail { color: #e74c3c; font-weight: bold; }
         .highlight-success { color: #2ecc71; font-weight: bold; }
 
-        .stat-box { background: #222; padding: 8px 20px; border-radius: 4px; border: 1px solid #444; margin-bottom: 15px; }
-        .money { color: #f1c40f; font-weight: bold; font-size: 20px; }
+        .stat-box { background: #222; padding: 5px 20px; border-radius: 4px; border: 1px solid #444; margin-bottom: 10px; }
+        .money { color: #f1c40f; font-weight: bold; font-size: 18px; }
 
         /* 商店網格 */
-        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .shop-item { background: #1a1a1a; padding: 10px; border: 1px solid #444; border-radius: 6px; cursor: pointer; transition: 0.2s; width: 180px; text-align: left; position: relative; }
+        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .shop-item { background: #1a1a1a; padding: 8px; border: 1px solid #444; border-radius: 6px; cursor: pointer; transition: 0.2s; width: 180px; text-align: left; position: relative; }
         .shop-item:hover { background: #252525; border-color: #3498db; transform: translateY(-2px); }
         
-        .item-name { font-weight: bold; color: #fff; font-size: 15px; }
-        .item-price { position: absolute; top: 10px; right: 10px; color: #f1c40f; font-size: 14px; font-weight: bold;}
-        .item-physics { color: #aaa; font-size: 11px; margin-top: 5px; font-style: normal; line-height: 1.3; } 
-        .item-level { color: #4caf50; font-size: 11px; margin-top: 4px; font-weight: bold;}
+        .item-name { font-weight: bold; color: #fff; font-size: 13px; }
+        .item-price { position: absolute; top: 8px; right: 8px; color: #f1c40f; font-size: 12px; font-weight: bold;}
+        .item-physics { color: #aaa; font-size: 10px; margin-top: 4px; font-style: normal; line-height: 1.3; } 
+        .item-level { color: #4caf50; font-size: 10px; margin-top: 4px; font-weight: bold;}
 
-        button { background: #2980b9; color: white; border: none; padding: 12px 50px; font-size: 18px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 5px; transition: 0.2s; letter-spacing: 1px;}
+        /* 新增：自定義設計面板 */
+        .design-panel { background: #0b1016; border: 1px dashed #38bdf8; border-radius: 6px; padding: 10px; margin-bottom: 10px; width: 360px; text-align: left; }
+        .design-title { color: #38bdf8; font-size: 14px; font-weight: bold; margin-bottom: 8px; }
+        .design-row { display: flex; justify-content: space-between; margin-bottom: 8px; gap: 10px; }
+        .design-col { flex: 1; background: #1a1a1a; padding: 8px; border-radius: 4px; }
+        .design-label { color: #aaa; font-size: 11px; margin-bottom: 4px; display: block; }
+        select, input[type=range] { width: 100%; background: #222; color: white; border: 1px solid #555; padding: 4px; border-radius: 3px; }
+        .design-stats { font-size: 11px; color: #ccc; background: #111; padding: 5px; border-radius: 3px; text-align: center; }
+
+        button { background: #2980b9; color: white; border: none; padding: 10px 40px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; margin: 10px 0 20px 0; transition: 0.2s; letter-spacing: 1px;}
         button:hover { background: #3498db; transform: scale(1.05); box-shadow: 0 0 15px rgba(52, 152, 219, 0.4); }
         
-        #hud { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; pointer-events: none; }
-        .hud-left, .hud-right { font-family: 'Courier New', monospace; font-size: 15px; text-shadow: 1px 1px 2px black; font-weight: bold; line-height: 1.4; }
+        #hud { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; pointer-events: none; }
+        .hud-left, .hud-right { font-family: 'Courier New', monospace; font-size: 13px; text-shadow: 1px 1px 2px black; font-weight: bold; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -58,7 +67,8 @@
         <div id="hud">
             <div class="hud-left">
                 垂直速度: <span id="speedDisplay">0.0</span> m/s<br>
-                受力狀態: <span id="forceDisplay">重力牽引</span>
+                受力狀態: <span id="forceDisplay">重力牽引</span><br>
+                總質量: <span id="massDisplay" style="color:#38bdf8;">1000</span> kg
             </div>
             <div class="hud-right" style="text-align: right;">
                 燃料: <span id="fuelDisplay">100</span>%<br>
@@ -86,33 +96,56 @@
                 <div class="shop-item" onclick="buyUpgrade('tank')">
                     <div class="item-name">⛽ 擴容燃料艙</div>
                     <div class="item-price">$<span id="price-tank">50</span></div>
-                    <div class="item-physics">增加質量與燃料攜帶量 (Δt 增加)。防止因燃料耗盡導致的自由落體。</div>
+                    <div class="item-physics">增加攜帶量。防止因燃料耗盡導致的自由落體。</div>
                     <div id="lvl-tank" class="item-level">Lv.1</div>
                 </div>
                 
                 <div class="shop-item" onclick="buyUpgrade('engine')">
                     <div class="item-name">🔥 高效能噴嘴</div>
                     <div class="item-price">$<span id="price-engine">80</span></div>
-                    <div class="item-physics">優化比衝 (Specific Impulse)。提升燃燒效率，用更少的油產生同樣的力。</div>
+                    <div class="item-physics">優化比衝。提升燃燒效率，用更少的油產生同樣的力。</div>
                     <div id="lvl-engine" class="item-level">Lv.1</div>
                 </div>
                 
                 <div class="shop-item" onclick="buyUpgrade('gear')">
                     <div class="item-name">⚙️ 液壓緩衝腿</div>
                     <div class="item-price">$<span id="price-gear">100</span></div>
-                    <div class="item-physics">強化結構以吸收撞擊時的動能 (KE)。提高安全著陸的速度上限。</div>
+                    <div class="item-physics">強化結構以吸收撞擊時的動能 (KE)。提高安全速度。</div>
                     <div id="lvl-gear" class="item-level">Lv.1</div>
                 </div>
                 
                 <div class="shop-item" onclick="buyItem('parachute')">
                     <div class="item-name">☂️ 應急降落傘</div>
                     <div class="item-price">$<span id="price-parachute">30</span></div>
-                    <div class="item-physics">利用空氣阻力 (Drag) 減速。火星大氣稀薄，需要巨大的傘面。</div>
+                    <div class="item-physics">利用空氣阻力 (Drag) 減速。火星大氣稀薄，需極大傘面。</div>
                     <div id="qty-parachute" class="item-level">庫存: 0</div>
                 </div>
             </div>
 
-            <button onclick="startGame()">發射下一枚探測器</button>
+            <div class="design-panel">
+                <div class="design-title">🛠️ 著陸艙自定義配置 (Trial Variables)</div>
+                <div class="design-row">
+                    <div class="design-col">
+                        <label class="design-label">機體材質 (Material):</label>
+                        <select id="podMaterial" onchange="updateDesignStats()">
+                            <option value="aluminum" selected>輕鋁合金 (標準: 質量1x, 抗撞1x)</option>
+                            <option value="carbon">碳纖維 (輕量: 質量0.7x, 抗撞0.6x)</option>
+                            <option value="titanium">鈦合金 (堅固: 質量1.5x, 抗撞1.5x)</option>
+                        </select>
+                    </div>
+                    <div class="design-col">
+                        <label class="design-label">科研載荷 (Payload): <span id="payloadVal" style="color: #f1c40f;">0</span> kg</label>
+                        <input type="range" id="payloadSlider" min="0" max="500" step="50" value="0" oninput="updateDesignStats()">
+                    </div>
+                </div>
+                <div class="design-stats">
+                    總質量: <span id="totalMassVal" style="color:#fff; font-weight:bold;">1000</span> kg | 
+                    推力效率: <span id="thrustEffVal" style="color:#fff; font-weight:bold;">100</span>% | 
+                    任務獎勵: +$<span id="payloadBonusVal" style="color:#2ecc71; font-weight:bold;">0</span>
+                </div>
+            </div>
+
+            <button onclick="startGame()">發射探測器 (Launch)</button>
         </div>
     </div>
 
@@ -136,50 +169,85 @@
     // 物理常數
     const BASE_GRAVITY = 0.035;
     const BASE_THRUST = 0.1;
+    const BASE_MASS = 1000;
+    
+    // 實時物理變量
     let currentMaxFuel, currentThrustCost, currentSafeSpeed;
+    let totalMass = 1000;
+    let massFactor = 1.0;
+    let currentPayloadBonus = 0;
     
     let parachuteActive = false;
     let parachuteTimer = 0;
 
-    // --- 史實資料庫 (Historical & Physics Knowledge Base) ---
+    // --- 史實資料庫 ---
     const FACTS = {
-        // 墜毀：速度過快
         crash_speed: [
-            "【歷史教訓】1999年，<span class='highlight-fail'>火星極地著陸者號 (Mars Polar Lander)</span> 在下降時墜毀。原因可能是感應器誤判高度，導致引擎過早關閉。",
-            "【歷史教訓】2016年，歐空局的 <span class='highlight-fail'>斯基亞帕雷利號 (Schiaparelli)</span> 以 540 km/h 的速度撞擊火星。原因是電腦數據溢出，誤以為已經著陸而切斷了降落傘。",
-            "【物理分析】你的著陸速度太快了！動能 (KE = ½mv²) 超出了起落架的承受極限，導致結構解體。",
-            "【失敗分析】如果你不及時減速，重力加速度 (g) 會讓你每秒都變得更快。請更早啟動引擎。"
+            "【歷史教訓】1999年，<span class='highlight-fail'>火星極地著陸者號</span> 在下降時墜毀。原因可能是感應器誤判高度，導致引擎過早關閉。",
+            "【物理分析】著陸速度太快！動能 (KE = ½mv²) 超出極限。你選擇的材質或起落架無法承受這股力量。"
         ],
-        // 墜毀：燃料耗盡
         crash_fuel: [
-            "【歷史教訓】2019年，以色列的 <span class='highlight-fail'>Beresheet (創世紀號)</span> 在月球表面墜毀。主引擎在最後時刻發生故障，導致無法減速。",
-            "【物理分析】燃料耗盡意味著失去了「反作用力」。你無法抵抗重力，最後只能變成自由落體運動。",
-            "【工程建議】這次墜毀是因為燃料預算不足。請嘗試在商店升級「擴容燃料艙」，或學習更省油的操作技巧。"
+            "【物理分析】燃料耗盡意味著失去了「反作用力」。你無法抵抗重力，最後只能變成自由落體運動。"
         ],
-        // 成功：驚險 (油少或速度快)
+        crash_mass: [
+            "【工程分析 (Trial & Error)】質量過大！根據牛頓第二定律 (a=F/m)，飛船越重，引擎的減速效果就越差。請嘗試減輕載荷或換輕量化材質！"
+        ],
         success_hard: [
-            "【歷史重現】<span class='highlight-success'>阿波羅11號</span> 著陸時也驚險萬分！阿姆斯壯切換到手動控制避開亂石，引擎熄火時燃料僅剩不到 20 秒！",
-            "【數據分析】這是一次硬著陸！雖然沒有墜毀，但衝擊力差點震壞儀器。建議升級起落架以備不時之需。"
+            "【數據分析】這是一次硬著陸！如果載荷太多，重力慣性會非常難以控制。建議升級起落架或換成鈦合金。"
         ],
-        // 成功：完美
         success_perfect: [
-            "【完美操作】就像 <span class='highlight-success'>好奇號 (Curiosity)</span> 一樣！你完美控制了速度矢量，實現了教科書級別的軟著陸。",
-            "【歷史重現】2021年，<span class='highlight-success'>毅力號 (Perseverance)</span> 成功降落耶澤羅撞擊坑。你的操作和它的自動導航系統一樣精準！"
+            "【完美操作】教科書級別的軟著陸。你在「載荷質量」與「推力」之間找到了完美的平衡！"
         ],
-        // 降落傘提示
         parachute_tip: [
-            "【技術知識】火星大氣密度只有地球的 1%。因此火星降落傘必須在超音速下打開，並承受數萬牛頓的拉力。",
             "【技術知識】降落傘是利用流體力學中的「阻力」來對抗重力，這是一種不消耗燃料的高效減速方式。"
+        ],
+        physics_mass: [
+            "【物理小百科】伽利略證明重力加速度與質量無關（所以輕重飛船自由落體一樣快），但根據 F=ma，飛船越重，你就需要越大的引擎推力才能把它停下來！"
         ]
     };
 
-    // 初始化背景星空
     for(let i=0; i<100; i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, size: Math.random()*1.5});
 
+    // 更新設計面板數據
+    function updateDesignStats() {
+        let material = document.getElementById('podMaterial').value;
+        let payload = parseInt(document.getElementById('payloadSlider').value);
+        
+        let matMassFactor = 1.0;
+        if(material === 'carbon') matMassFactor = 0.7;
+        if(material === 'titanium') matMassFactor = 1.5;
+
+        // 計算總質量 (基礎 1000kg)
+        totalMass = Math.round(BASE_MASS * matMassFactor) + payload;
+        massFactor = totalMass / BASE_MASS; // 用於計算推力衰減
+        
+        // 載荷獎金 (每 50kg 多 15 元)
+        currentPayloadBonus = (payload / 50) * 15;
+
+        // 更新 UI
+        document.getElementById('payloadVal').innerText = payload;
+        document.getElementById('totalMassVal').innerText = totalMass;
+        document.getElementById('payloadBonusVal').innerText = currentPayloadBonus;
+        
+        // 推力效率 = 1 / massFactor
+        let eff = Math.round((1 / massFactor) * 100);
+        let effEl = document.getElementById('thrustEffVal');
+        effEl.innerText = eff;
+        effEl.style.color = eff < 100 ? "#e74c3c" : (eff > 100 ? "#2ecc71" : "#fff");
+    }
+
     function initLander() {
+        // 讀取升級數據
         currentMaxFuel = 100 + (upgrades.tank.level - 1) * 30;
         currentThrustCost = 0.5 - (upgrades.engine.level - 1) * 0.08;
-        currentSafeSpeed = 1.2 + (upgrades.gear.level - 1) * 0.4;
+        
+        // 計算安全速度 (基礎 1.2 + 升級 + 材質影響)
+        let baseSafeSpeed = 1.2 + (upgrades.gear.level - 1) * 0.4;
+        let material = document.getElementById('podMaterial').value;
+        let matDurability = 1.0;
+        if(material === 'carbon') matDurability = 0.6;
+        if(material === 'titanium') matDurability = 1.5;
+        currentSafeSpeed = baseSafeSpeed * matDurability;
         
         lander = {
             x: canvas.width / 2 - 15,
@@ -193,6 +261,9 @@
         };
         parachuteActive = false;
         parachuteTimer = 0;
+        
+        // 更新遊戲 HUD
+        document.getElementById('massDisplay').innerText = totalMass;
     }
 
     function startGame() {
@@ -202,13 +273,11 @@
         gameLoop();
     }
 
-    // 隨機獲取一條知識
     function getRandomFact(category) {
         const list = FACTS[category];
         return list[Math.floor(Math.random() * list.length)];
     }
 
-    // 顯示結算與知識
     function showShop(status, earnedMoney, reasonCode) {
         gameActive = false;
         cash += earnedMoney;
@@ -219,15 +288,13 @@
         const kBox = document.getElementById('kBox');
         const kTitle = document.getElementById('kTitle');
         
-        // 樣式重置
         kBox.style.borderLeftColor = status === "SUCCESS" ? "#2ecc71" : "#e74c3c";
         
         if (status === "SUCCESS") {
             title.innerText = "任務圓滿成功";
             title.style.color = "#4caf50";
-            earnings.innerText = "獲得撥款: + $" + earnedMoney;
+            earnings.innerText = "撥款 + 載荷獎金: + $" + earnedMoney;
             
-            // 判斷是完美還是驚險
             if (reasonCode === "perfect") {
                 kTitle.innerText = "🏆 總工程師日誌：完美";
                 kText.innerHTML = getRandomFact('success_perfect');
@@ -241,12 +308,21 @@
             earnings.innerText = "保險理賠: + $" + earnedMoney;
             
             kTitle.innerText = "💥 事故調查報告";
-            if (reasonCode === "fuel") kText.innerHTML = getRandomFact('crash_fuel');
-            else kText.innerHTML = getRandomFact('crash_speed');
+            // 如果質量大於 1200kg 且摔死，給予特別的質量反饋
+            if (reasonCode === "speed" && totalMass > 1200 && Math.random() > 0.3) {
+                kText.innerHTML = getRandomFact('crash_mass');
+            } else if (reasonCode === "fuel") {
+                kText.innerHTML = getRandomFact('crash_fuel');
+            } else {
+                kText.innerHTML = getRandomFact('crash_speed');
+            }
         }
 
-        // 如果這局用了降落傘，有 40% 概率強制覆蓋為降落傘知識 (強化記憶)
-        if (parachuteActive && Math.random() < 0.4) {
+        // 隨機科普物理質量知識
+        if (Math.random() < 0.25) {
+             kTitle.innerText = "📚 物理小百科";
+             kText.innerHTML = getRandomFact('physics_mass');
+        } else if (parachuteActive && Math.random() < 0.5) {
              kTitle.innerText = "☂️ 技術小百科";
              kText.innerHTML = getRandomFact('parachute_tip');
         }
@@ -262,6 +338,7 @@
         updateItemUI('engine', upgrades.engine);
         updateItemUI('gear', upgrades.gear);
         document.getElementById('qty-parachute').innerText = "庫存: " + inventory.parachute;
+        updateDesignStats(); // 確保重新打開時數值正確
     }
 
     function updateItemUI(id, item) {
@@ -289,7 +366,6 @@
         }
     };
 
-    // --- 遊戲循環 ---
     document.addEventListener('keydown', (e) => {
         if (!gameActive) return;
         if (e.code === 'Space' && lander.fuel > 0) lander.thrusting = true;
@@ -315,14 +391,16 @@
             forceStatus = "空氣阻力 (Drag)";
         } else {
             if (lander.thrusting && lander.fuel > 0) {
-                lander.dy -= BASE_THRUST;
+                // 【核心 STEM 邏輯】: a = F/m。質量越大，推力產生的加速度越小！
+                let actualThrustAcc = BASE_THRUST / massFactor;
+                lander.dy -= actualThrustAcc;
                 lander.fuel -= currentThrustCost;
                 forceStatus = "引擎推力 (Thrust)";
             }
+            // 伽利略落體定律：重力加速度 g 不受質量影響
             lander.dy += gravity;
         }
         
-        // 更新 HUD 顏色
         const elForce = document.getElementById('forceDisplay');
         elForce.innerText = forceStatus;
         if (forceStatus.includes("推力")) elForce.style.color = "#f1c40f";
@@ -340,17 +418,15 @@
             
             let earned = 0;
             if (lander.dy < currentSafeSpeed) {
-                // 成功
-                let landingBonus = Math.floor((currentSafeSpeed - lander.dy) * 50);
+                // 成功：基礎分 + 燃油分 + 載荷獎金
                 let fuelBonus = Math.floor(lander.fuel);
-                earned = 100 + fuelBonus + landingBonus;
+                earned = 100 + fuelBonus + currentPayloadBonus;
                 
-                // 判斷是否為完美著陸 (油剩很多且很溫柔)
                 let type = (lander.dy < currentSafeSpeed * 0.5) ? "perfect" : "hard";
                 showShop("SUCCESS", earned, type);
             } else {
                 // 失敗
-                earned = 30; // 稍微提高一點低保
+                earned = 30; 
                 let reason = lander.fuel <= 0 ? "fuel" : "speed";
                 showShop("CRASH", earned, reason);
             }
@@ -360,39 +436,37 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // 星星 & 地面
         ctx.fillStyle = "white"; stars.forEach(s => ctx.fillRect(s.x, s.y, s.size, s.size));
         ctx.fillStyle = "#d35400"; ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
 
-        // 飛船
         ctx.save();
         ctx.translate(lander.x, lander.y);
 
         if (parachuteActive) {
-            // 畫傘
             ctx.beginPath(); ctx.arc(15, -25, 30, Math.PI, 0);
             ctx.fillStyle = "#2ecc71"; ctx.fill();
             ctx.strokeStyle = "#fff"; ctx.stroke();
             ctx.beginPath(); ctx.moveTo(-15, -25); ctx.lineTo(0, 0); ctx.moveTo(45, -25); ctx.lineTo(30, 0); ctx.stroke();
         }
 
-        // 機身
-        ctx.fillStyle = "#bdc3c7";
+        // 機身材質變色 (視覺回饋)
+        let material = document.getElementById('podMaterial').value;
+        if(material === 'carbon') ctx.fillStyle = "#333"; // 碳纖黑
+        else if(material === 'titanium') ctx.fillStyle = "#95a5a6"; // 鈦合金灰
+        else ctx.fillStyle = "#bdc3c7"; // 鋁合金亮銀
+        
         ctx.beginPath(); ctx.moveTo(15, -10); ctx.lineTo(30, 20); ctx.lineTo(0, 20); ctx.fill();
         
-        // 畫避震腿
         ctx.strokeStyle = upgrades.gear.level > 1 ? "#f1c40f" : "#7f8c8d";
         ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(-5, 30); ctx.moveTo(30, 20); ctx.lineTo(35, 30); ctx.stroke();
 
-        // 噴火
         if (lander.thrusting && !parachuteActive) {
             ctx.fillStyle = upgrades.engine.level > 2 ? "#3498db" : "orange";
             ctx.beginPath(); ctx.moveTo(10, 20); ctx.lineTo(15, 35 + Math.random()*15); ctx.lineTo(20, 20); ctx.fill();
         }
         ctx.restore();
 
-        // 實時數據更新
         document.getElementById('speedDisplay').innerText = (lander.dy * 10).toFixed(1);
         document.getElementById('speedDisplay').style.color = lander.dy > currentSafeSpeed ? '#e74c3c' : '#2ecc71';
         document.getElementById('fuelDisplay').innerText = lander.fuel.toFixed(0);
